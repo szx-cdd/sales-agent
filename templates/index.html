@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>销售成单推演 Agent</title>
+      <style>
+          * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+          }
+          body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              min-height: 100vh;
+              padding: 20px;
+          }
+          .container {
+              max-width: 1200px;
+              margin: 0 auto;
+          }
+          .header {
+              text-align: center;
+              color: white;
+              padding: 40px 20px;
+          }
+          .header h1 {
+              font-size: 42px;
+              margin-bottom: 16px;
+              text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+          }
+          .header p {
+              font-size: 18px;
+              opacity: 0.9;
+          }
+          .main-content {
+              background: white;
+              border-radius: 20px;
+              padding: 40px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          }
+          .nav-tabs {
+              display: flex;
+              gap: 12px;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #f0f0f0;
+              padding-bottom: 20px;
+          }
+          .nav-tab {
+              padding: 12px 24px;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.3s;
+              font-weight: 500;
+          }
+          .nav-tab.active {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+          }
+          .nav-tab:not(.active):hover {
+              background: #f0f4ff;
+              color: #667eea;
+          }
+          .form-group {
+              margin-bottom: 24px;
+          }
+          .form-label {
+              display: block;
+              margin-bottom: 8px;
+              font-weight: 500;
+              color: #333;
+          }
+          .form-input, .form-select, .form-textarea {
+              width: 100%;
+              padding: 14px 18px;
+              border: 2px solid #e8e8e8;
+              border-radius: 12px;
+              font-size: 15px;
+              transition: all 0.3s;
+          }
+          .form-input:focus, .form-select:focus, .form-textarea:focus {
+              outline: none;
+              border-color: #667eea;
+              box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+          }
+          .form-textarea {
+              min-height: 150px;
+              resize: vertical;
+          }
+          .upload-area {
+              border: 2px dashed #d0d0d0;
+              border-radius: 12px;
+              padding: 40px;
+              text-align: center;
+              cursor: pointer;
+              transition: all 0.3s;
+              background: #fafafa;
+          }
+          .upload-area:hover {
+              border-color: #667eea;
+              background: #f0f4ff;
+          }
+          .upload-icon {
+              font-size: 48px;
+              margin-bottom: 12px;
+          }
+          .btn {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              padding: 16px 40px;
+              border-radius: 12px;
+              font-size: 17px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.3s;
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+          }
+          .btn:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+          }
+          .btn-secondary {
+              background: #f5f5f5;
+              color: #333;
+          }
+          .btn-secondary:hover {
+              background: #e8e8e8;
+              box-shadow: none;
+          }
+          .result-section {
+              margin-top: 40px;
+              display: none;
+          }
+          .result-section.show {
+              display: block;
+          }
+          .result-card {
+              background: #f8f9fa;
+              border-radius: 16px;
+              padding: 30px;
+              margin-bottom: 20px;
+          }
+          .result-title {
+              font-size: 20px;
+              font-weight: 600;
+              color: #667eea;
+              margin-bottom: 16px;
+              display: flex;
+              align-items: center;
+              gap: 10px;
+          }
+          .result-content {
+              color: #444;
+              line-height: 1.8;
+              font-size: 15px;
+          }
+          .tag {
+              display: inline-block;
+              padding: 6px 14px;
+              background: #e6f7ff;
+              color: #1890ff;
+              border-radius: 6px;
+              font-size: 13px;
+              font-weight: 500;
+              margin-right: 8px;
+              margin-bottom: 8px;
+          }
+          .navbar {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 30px;
+          }
+          .nav-links {
+              display: flex;
+              gap: 20px;
+          }
+          .nav-link {
+              color: #666;
+              text-decoration: none;
+              padding: 10px 20px;
+              border-radius: 8px;
+              transition: all 0.3s;
+          }
+          .nav-link:hover {
+              color: #667eea;
+              background: #f0f4ff;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>销售成单推演 Agent</h1>
+              <p>AI 驱动的销售策略分析系统，助你洞察客户、提升成交率</p>
+          </div>
+
+          <div class="main-content">
+              <div class="navbar">
+                  <div></div>
+                  <div class="nav-links">
+                      <a href="/" class="nav-link" style="color: #667eea; background: #f0f4ff;">快速分析</a>
+                      <a href="/customers" class="nav-link">客户管理</a>
+                  </div>
+              </div>
+
+              <div class="nav-tabs">
+                  <div class="nav-tab active" onclick="switchTab('full')">完整分析</div>
+                  <div class="nav-tab" onclick="switchTab('profile')">客户画像</div>
+                  <div class="nav-tab" onclick="switchTab('followup')">跟进方案</div>
+                  <div class="nav-tab" onclick="switchTab('objection')">异议处理</div>
+              </div>
+
+              <form id="analyzeForm">
+                  <div class="form-group">
+                      <label class="form-label">所属行业</label>
+                      <select class="form-select" name="industry" id="industry">
+                          <option value="SaaS">SaaS/企业服务</option>
+                          <option value="电商">电商/零售</option>
+                          <option value="教育">教育培训</option>
+                          <option value="金融">金融/保险</option>
+                          <option value="制造">制造业</option>
+                          <option value="医疗">医疗健康</option>
+                          <option value="其他">其他</option>
+                      </select>
+                  </div>
+
+                  <div class="form-group">
+                      <label class="form-label">客户基本信息</label>
+                      <textarea class="form-textarea" name="customer_info" id="customer_info" placeholder="客户公司规模、职位、已知需求等..."></textarea>
+                  </div>
+
+                  <div class="form-group">
+                      <label class="form-label">沟通记录/聊天记录</label>
+                      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                          <div class="upload-icon">📎</div>
+                          <div style="color: #666; margin-bottom: 8px;">点击上传文件或拖拽到此处</div>
+                          <div style="color: #999; font-size: 13px;">支持 PDF、Word、Excel、图片等格式</div>
+                      </div>
+                      <input type="file" id="fileInput" style="display: none;" multiple onchange="handleFiles(this.files)">
+                      <textarea class="form-textarea" name="chat_history" id="chat_history" style="margin-top: 16px;" placeholder="或在此粘贴聊天记录..."></textarea>
+                  </div>
+
+                  <input type="hidden" name="analysis_type" id="analysis_type" value="full">
+
+                  <div style="text-align: center; margin-top: 30px;">
+                      <button type="button" class="btn" onclick="submitAnalyze()">
+                          <span>开始分析</span>
+                      </button>
+                  </div>
+              </form>
+
+              <div class="result-section" id="resultSection">
+                  <div style="text-align: center; padding: 40px; color: #667eea;" id="loadingIndicator">
+                      <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                      <div>AI 正在分析中，请稍候...</div>
+                  </div>
+                  <div id="resultContent"></div>
+              </div>
+          </div>
+      </div>
+
+      <script>
+          function switchTab(type) {
+              document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+              event.target.classList.add('active');
+              document.getElementById('analysis_type').value = type;
+          }
+
+          function handleFiles(files) {
+              if (!files.length) return;
+
+              const formData = new FormData();
+              for (let i = 0; i < files.length; i++) {
+                  formData.append('files', files[i]);
+              }
+
+              fetch('/api/upload-files', {
+                  method: 'POST',
+                  body: formData
+              })
+              .then(r => r.json())
+              .then(data => {
+                  if (data.success) {
+                      const currentContent = document.getElementById('chat_history').value;
+                      document.getElementById('chat_history').value = currentContent +
+                          (currentContent ? '\n\n' : '') + data.extracted_text;
+                  } else {
+                      alert('文件处理失败: ' + data.error);
+                  }
+              })
+              .catch(e => alert('上传失败: ' + e));
+          }
+
+          function submitAnalyze() {
+              const form = document.getElementById('analyzeForm');
+              const formData = new FormData(form);
+
+              document.getElementById('resultSection').classList.add('show');
+              document.getElementById('loadingIndicator').style.display = 'block';
+              document.getElementById('resultContent').innerHTML = '';
+
+              fetch('/api/analyze', {
+                  method: 'POST',
+                  body: formData
+              })
+              .then(r => r.json())
+              .then(data => {
+                  document.getElementById('loadingIndicator').style.display = 'none';
+
+                  let html = '';
+                  if (data.error) {
+                      html = `<div class="result-card" style="border-left: 4px solid #ff4d4f;">
+                          <div class="result-title" style="color: #ff4d4f;">分析出错</div>
+                          <div class="result-content">${data.error}</div>
+                      </div>`;
+                  } else {
+                      for (const [key, value] of Object.entries(data)) {
+                          if (key === 'error') continue;
+
+                          let content = '';
+                          if (typeof value === 'object') {
+                              content = renderObject(value);
+                          } else {
+                              content = `<p>${value}</p>`;
+                          }
+
+                          html += `<div class="result-card">
+                              <div class="result-title">${key}</div>
+                              <div class="result-content">${content}</div>
+                          </div>`;
+                      }
+                  }
+
+                  document.getElementById('resultContent').innerHTML = html;
+              })
+              .catch(e => {
+                  document.getElementById('loadingIndicator').style.display = 'none';
+                  document.getElementById('resultContent').innerHTML =
+                      `<div class="result-card" style="border-left: 4px solid #ff4d4f;">
+                          <div class="result-title" style="color: #ff4d4f;">请求失败</div>
+                          <div class="result-content">${e.message}</div>
+                      </div>`;
+              });
+          }
+
+          function renderObject(obj) {
+              let html = '';
+              for (const [key, value] of Object.entries(obj)) {
+                  if (typeof value === 'object' && !Array.isArray(value)) {
+                      html += `<div style="margin-bottom: 16px;">
+                          <div style="font-weight: 600; color: #667eea; margin-bottom: 8px;">${key}</div>
+                          <div style="padding-left: 16px;">${renderObject(value)}</div>
+                      </div>`;
+                  } else if (Array.isArray(value)) {
+                      html += `<div style="margin-bottom: 16px;">
+                          <div style="font-weight: 600; color: #667eea; margin-bottom: 8px;">${key}</div>
+                          <ul style="padding-left: 20px;">`;
+                      value.forEach(item => {
+                          if (typeof item === 'object') {
+                              html += `<li style="margin-bottom: 8px;">${renderObject(item)}</li>`;
+                          } else {
+                              html += `<li>${item}</li>`;
+                          }
+                      });
+                      html += `</ul></div>`;
+                  } else {
+                      html += `<p style="margin-bottom: 8px;"><strong>${key}:</strong> ${value}</p>`;
+                  }
+              }
+              return html;
+          }
+      </script>
+  </body>
+  </html>
