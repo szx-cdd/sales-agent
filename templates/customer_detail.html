@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+  <meta charset="UTF-8">
+  <title>客户详情</title>
+  <style>
+  body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px;margin:0}
+  .container{max-width:1200px;margin:0 auto}
+  .navbar{background:white;border-radius:12px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between}
+  .nav-brand{font-size:20px;font-weight:600}
+  .nav-links{display:flex;gap:20px}
+  .nav-link{color:#666;text-decoration:none;padding:8px 16px}
+  .btn{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;margin-right:8px}
+  .btn-secondary{background:#f0f0f0;color:#333}
+  .main-content{background:white;border-radius:12px;padding:24px}
+  .section{margin-bottom:30px}
+  .section-title{font-size:18px;font-weight:600;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #667eea}
+  .info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+  .info-item{background:#f8f9fa;padding:16px;border-radius:8px}
+  .info-label{color:#666;font-size:14px;margin-bottom:4px}
+  .info-value{font-size:16px;font-weight:500}
+  textarea{width:100%;min-height:120px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;margin-bottom:12px;font-family:inherit}
+  .upload-box{border:2px dashed #667eea;border-radius:8px;padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;background:#f8f9fa}
+  .result-box{background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;padding:20px;margin-top:16px}
+  </style>
+  </head>
+  <body>
+  <div class="container">
+  <nav class="navbar">
+  <div class="nav-brand">销售成单推演 Agent</div>
+  <div class="nav-links">
+  <a href="/" class="nav-link">快速分析</a>
+  <a href="/customers" class="nav-link">客户管理</a>
+  </div>
+  </nav>
+  <div class="main-content">
+  <div class="section">
+  <div class="section-title">客户信息</div>
+  <div class="info-grid">
+  <div class="info-item"><div class="info-label">姓名</div><div class="info-value" id="cName">-</div></div>
+  <div class="info-item"><div class="info-label">公司</div><div class="info-value" id="cCompany">-</div></div>
+  <div class="info-item"><div class="info-label">行业</div><div class="info-value" id="cIndustry">-</div></div>
+  <div class="info-item"><div class="info-label">电话</div><div class="info-value" id="cPhone">-</div></div>
+  </div>
+  </div>
+  <div class="section">
+  <div class="section-title">添加沟通记录</div>
+  <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+  <div>点击上传文件（PDF、Word、图片等）</div>
+  </div>
+  <input type="file" id="fileInput" style="display:none" multiple onchange="handleFiles(this.files)">
+  <textarea id="chatContent" placeholder="在此粘贴最新的聊天记录..."></textarea>
+  <button class="btn" onclick="submitChat()">保存记录</button>
+  </div>
+  <div class="section">
+  <div class="section-title">AI 智能分析</div>
+  <button class="btn" onclick="analyze('full')">开始分析</button>
+  <div id="result"></div>
+  </div>
+  </div>
+  </div>
+  <script>
+  var customerId=window.location.pathname.split('/').pop();
+  fetch('/api/customers/'+customerId).then(r=>r.json()).then(d=>{
+  if(d.success){var c=d.customer;document.getElementById('cName').textContent=c.name||'-';document.getElementById('cCompany').textContent=c.company||'-';document.getElementById('cIndustry').textContent=c.industry||'-';document.getElement
+  ById('cPhone').textContent=c.phone||'-';}
+  });
+  function handleFiles(files){if(!files.length)return;var formData=new FormData();for(var i=0;i<files.length;i++){formData.append('files',files[i])}var content=document.getElementById('chatContent').value;if(content)formData.append('cont
+  ent',content);fetch('/api/customers/'+customerId+'/chat',{method:'POST',body:formData}).then(r=>r.json()).then(d=>{if(d.success){alert('上传成功');document.getElementById('chatContent').value='';}else{alert('失败:'+d.error)}})}
+  function submitChat(){var content=document.getElementById('chatContent').value;if(!content.trim()){alert('请输入内容');return}var formData=new FormData();formData.append('content',content);fetch('/api/customers/'+customerId+'/chat',{me
+  thod:'POST',body:formData}).then(r=>r.json()).then(d=>{if(d.success){alert('保存成功');document.getElementById('chatContent').value='';}else{alert('失败:'+d.error)}})}
+  function analyze(type){document.getElementById('result').innerHTML='<div style="padding:20px;color:#667eea">分析中...</div>';var formData=new FormData();formData.append('analysis_type',type);var
+  newChat=document.getElementById('chatContent').value;if(newChat)formData.append('new_chat',newChat);fetch('/api/customers/'+customerId+'/analyze',{method:'POST',body:formData}).then(r=>r.json()).then(d=>{if(d.success){var
+  r=d.result;var html='<div class="result-box">';for(var key in r){html+='<div style="margin-bottom:16px"><div
+  style="font-weight:600;color:#1890ff;margin-bottom:8px">'+key+'</div><div>'+r[key]+'</div></div>'}html+='</div>';document.getElementById('result').innerHTML=html;}else{document.getElementById('result').innerHTML='<div
+  style="color:red">分析失败:'+d.error+'</div>'}})}
+  </script>
+  </body>
+  </html>
