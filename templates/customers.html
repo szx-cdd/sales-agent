@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+  <meta charset="UTF-8">
+  <title>客户管理</title>
+  <style>
+  body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px;margin:0}
+  .container{max-width:1200px;margin:0 auto}
+  .navbar{background:white;border-radius:12px;padding:16px 24px;margin-bottom:20px;display:flex;justify-content:space-between}
+  .nav-brand{font-size:20px;font-weight:600}
+  .nav-links{display:flex;gap:20px}
+  .nav-link{color:#666;text-decoration:none;padding:8px 16px}
+  .nav-link.active{color:#667eea;background:#f0f4ff;border-radius:6px}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:30px}
+  .stat-card{background:white;border-radius:12px;padding:24px}
+  .stat-value{font-size:36px;font-weight:700;color:#667eea}
+  .main-content{background:white;border-radius:12px;padding:24px}
+  .toolbar{display:flex;justify-content:space-between;margin-bottom:24px}
+  .search-box{display:flex;gap:12px}
+  .search-input{padding:10px 16px;border:2px solid #e0e0e0;border-radius:8px;width:300px}
+  .btn{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer}
+  .btn-secondary{background:#f0f0f0;color:#333}
+  .customer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  .customer-card{background:#f8f9fa;border-radius:12px;padding:20px;border-left:4px solid #667eea;cursor:pointer}
+  .customer-name{font-size:18px;font-weight:600;margin-bottom:8px}
+  .tag{background:#e6f7ff;color:#1890ff;padding:4px 12px;border-radius:4px;font-size:12px}
+  .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:white;border-radius:12px;width:90%;max-width:500px}
+  .form-input,.form-select{width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px}
+  </style>
+  </head>
+  <body>
+  <div class="container">
+  <nav class="navbar"><div class="nav-brand">销售成单推演 Agent</div>
+  <div class="nav-links"><a href="/" class="nav-link">快速分析</a><a href="/customers" class="nav-link active">客户管理</a></div>
+  </nav>
+  <div class="stats-grid">
+  <div class="stat-card"><div class="stat-value" id="totalCustomers">0</div><div>客户总数</div></div>
+  <div class="stat-card"><div class="stat-value" id="todayNew">0</div><div>今日新增</div></div>
+  <div class="stat-card"><div class="stat-value" id="weeklyActive">0</div><div>本周活跃</div></div>
+  </div>
+  <div class="main-content">
+  <div class="toolbar">
+  <div class="search-box">
+  <input class="search-input" id="searchInput" placeholder="搜索客户姓名...">
+  <select class="form-select" id="industryFilter" style="width:150px">
+  <option value="">全部行业</option>
+  <option>SaaS</option><option>电商</option><option>教育</option>
+  <option>金融</option><option>制造</option><option>医疗</option><option>其他</option>
+  </select>
+  <button class="btn btn-secondary" onclick="searchCustomers()">搜索</button>
+  </div>
+  <button class="btn" onclick="openAddModal()">+ 新增客户</button>
+  </div>
+  <div id="customerList" class="customer-grid"></div>
+  </div>
+  </div>
+  <div class="modal-overlay" id="addModal"><div class="modal">
+  <div style="padding:20px;border-bottom:1px solid #e0e0e0;font-weight:600">新增客户</div>
+  <div style="padding:24px">
+  <form id="addCustomerForm">
+  <div style="margin-bottom:16px"><label>客户姓名 *</label><input class="form-input" name="name" required></div>
+  <div style="margin-bottom:16px"><label>公司名称</label><input class="form-input" name="company"></div>
+  <div style="margin-bottom:16px"><label>行业</label><select class="form-select" name="industry"><option
+  value="">请选择</option><option>SaaS</option><option>电商</option><option>教育</option><option>金融</option><option>制造</option><option>医疗</option><option>其他</option></select></div>
+  <div style="margin-bottom:16px"><label>电话</label><input class="form-input" name="phone"></div>
+  <div style="margin-bottom:16px"><label>邮箱</label><input class="form-input" name="email"></div>
+  </form>
+  </div>
+  <div style="padding:16px 24px;border-top:1px solid #e0e0e0;display:flex;justify-content:flex-end;gap:12px">
+  <button class="btn btn-secondary" onclick="closeAddModal()">取消</button>
+  <button class="btn" onclick="submitAddCustomer()">保存</button>
+  </div>
+  </div></div>
+  <script>
+  function loadCustomers(){fetch("/api/customers").then(r=>r.json()).then(d=>{if(d.success){var h="";for(var i=0;i<d.customers.length;i++){var c=d.customers[i];h+="<div class='customer-card' onclick='viewCustomer("+c.id+")'><div
+  class='customer-name'>"+c.name+"</div><div>"+(c.company||"暂无公司")+"</div><div>"+(c.industry?"<span class='tag'>"+c.industry+"</span>":"")+"</div></div>"}document.getElementById("customerList").innerHTML=h}})}function
+  viewCustomer(id){window.location.href="/customers/"+id}function openAddModal(){document.getElementById("addModal").classList.add("show")}function closeAddModal(){document.getElementById("addModal").classList.remove("show")}function
+  submitAddCustomer(){fetch("/api/customers",{method:"POST",body:new FormData(document.getElementById("addCustomerForm"))}).then(r=>r.json()).then(d=>{if(d.success){closeAddModal();loadCustomers()}else alert("失败")})}function
+  searchCustomers(){var s=document.getElementById("searchInput").value;var ind=document.getElementById("industryFilter").value;var
+  url="/api/customers";if(s||ind){url+="?";if(s)url+="search="+encodeURIComponent(s);if(s&&ind)url+="&";if(ind)url+="industry="+encodeURIComponent(ind)}fetch(url).then(r=>r.json()).then(d=>{if(d.success){var h="";for(var
+  i=0;i<d.customers.length;i++){var c=d.customers[i];h+="<div class='customer-card' onclick='viewCustomer("+c.id+")'><div class='customer-name'>"+c.name+"</div><div>"+(c.company||"暂无公司")+"</div><div>"+(c.industry?"<span
+  class='tag'>"+c.industry+"</span>":"")+"</div></div>"}document.getElementById("customerList").innerHTML=h}})}document.addEventListener("DOMContentLoaded",loadCustomers)
+  </script>
+  </body>
+  </html>
