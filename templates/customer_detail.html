@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户详情 - 销售成单推演 Agent</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .info-row {
+            margin-bottom: 12px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            display: inline-block;
+            width: 100px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .section {
+            margin-top: 24px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #667eea;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+        .upload-box {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .history-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .history-content {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .empty {
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/customers" class="back-link">← 返回客户列表</a>
+
+        <div class="card">
+            <div class="title" id="customerName">加载中...</div>
+            <div id="customerInfo">
+                <div class="info-row"><span class="info-label">公司:</span> <span id="company">-</span></div>
+                <div class="info-row"><span class="info-label">行业:</span> <span id="industry">-</span></div>
+                <div class="info-row"><span class="info-label">电话:</span> <span id="phone">-</span></div>
+                <div class="info-row"><span class="info-label">邮箱:</span> <span id="email">-</span></div>
+                <div class="info-row"><span class="info-label">备注:</span> <span id="notes">-</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">添加聊天记录 / 上传文件</div>
+            <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                点击上传文件（图片/PDF/Word）自动提取文本
+            </div>
+            <input type="file" id="fileInput" multiple style="display:none">
+            <textarea id="chatContent" placeholder="输入或粘贴聊天记录..."></textarea>
+            <button class="btn" onclick="addChat()">保存聊天记录</button>
+        </div>
+
+        <div class="card">
+            <div class="section-title">AI 分析</div>
+            <button class="btn btn-success" onclick="startAnalyze('full')">完整分析</button>
+            <button class="btn btn-warning" onclick="startAnalyze('profile')">生成客户画像</button>
+            <div id="analysisResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">聊天记录历史</div>
+            <div id="chatHistoryList"></div>
+        </div>
+    </div>
+
+    <script>
+        const customerId = window.location.pathname.split('/').pop();
+        
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderObject(obj) {
+            let html = '';
+            for (const [key, value] of Object.entries(obj)) {
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    html += `<div style="margin-bottom:12px;">
+                        <div style="font-weight:600;color:#667eea;">${escapeHtml(key)}</div>
+                        <div style="padding-left:12px;">${renderObject(value)}</div>
+                    </div>`;
+                } else if (Array.isArray(value)) {
+                    html += `<div style="margin-bottom:12px;">
+                        <div style="font-weight:600;color:#667eea;">${escapeHtml(key)}</div>
+                        <ul style="padding-left:20px;">`;
+                    value.forEach(item => {
+                        html += `<li>${escapeHtml(String(item))}</li>`;
+                    });
+                    html += `</ul></div>`;
+                } else {
+                    html += `<p><strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(value))}</p>`;
+                }
+            }
+            return html;
+        }
+
+        async function loadCustomerDetail() {
+            try {
+                const res = await fetch(`/api/customers/${customerId}`);
+                const data = await res.json();
+                if (!data.success) return;
+
+                const c = data.customer;
+                document.getElementById("customerName").textContent = escapeHtml(c.name);
+                document.getElementById("company").textContent = escapeHtml(c.company || "-");
+                document.getElementById("industry").textContent = escapeHtml(c.industry || "-");
+                document.getElementById("phone").textContent = escapeHtml(c.phone || "-");
+                document.getElementById("email").textContent = escapeHtml(c.email || "-");
+                document.getElementById("notes").textContent = escapeHtml(c.notes || "-");
+            } catch (e) {}
+        }
+
+        async function addChat() {
+            const content = document.getElementById("chatContent").value;
+            const files = document.getElementById("fileInput").files;
+            
+            const formData = new FormData();
+            if (content) formData.append("content", content);
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]);
+            }
+
+            try {
+                const res = await fetch(`/api/customers/${customerId}/chat`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert("保存成功");
+                    document.getElementById("chatContent").value = "";
+                    document.getElementById("fileInput").value = "";
+                } else {
+                    alert("失败：" + data.error);
+                }
+            } catch (e) {
+                alert("请求失败");
+            }
+        }
+
+        async function startAnalyze(type) {
+            const resultEl = document.getElementById("analysisResult");
+            resultEl.style.display = "block";
+            resultEl.innerHTML = "分析中...";
+
+            const formData = new FormData();
+            formData.append("analysis_type", type);
+            formData.append("include_history", "true");
+
+            try {
+                const res = await fetch(`/api/customers/${customerId}/analyze`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    resultEl.innerHTML = renderObject(data.result);
+                } else {
+                    resultEl.innerHTML = "失败：" + data.error;
+                }
+            } catch (e) {
+                resultEl.innerHTML = "请求失败";
+            }
+        }
+
+        window.onload = loadCustomerDetail;
+    </script>
+</body>
+</html>
