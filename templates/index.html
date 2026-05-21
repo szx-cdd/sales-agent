@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售成单推演 Agent</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            opacity: 0.95;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .upload-box {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nav a {
+            color: white;
+            margin: 0 10px;
+            text-decoration: none;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">快速分析</a>
+            <a href="/customers">客户管理</a>
+        </div>
+
+        <div class="card">
+            <div class="title">销售成单推演 · 快速分析</div>
+
+            <div class="form-group">
+                <label>所属行业</label>
+                <select id="industry">
+                    <option>SaaS</option>
+                    <option>电商</option>
+                    <option>教育</option>
+                    <option>金融</option>
+                    <option>制造</option>
+                    <option>医疗</option>
+                    <option>其他</option>
+                </select>
+            </div>
+
+            <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                点击上传文件（PDF/Word/图片/TXT）自动提取文本
+            </div>
+            <input type="file" id="fileInput" multiple style="display:none">
+
+            <div class="form-group">
+                <label>客户基本信息</label>
+                <textarea id="customerInfo" placeholder="输入客户公司、需求、背景等"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>聊天记录</label>
+                <textarea id="chatHistory" placeholder="粘贴与客户的对话记录"></textarea>
+            </div>
+
+            <button class="btn" onclick="startAnalyze('full')">完整分析</button>
+            <button class="btn" onclick="startAnalyze('profile')">生成客户画像</button>
+
+            <div id="result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderObject(obj) {
+            let html = '';
+            for (const [key, value] of Object.entries(obj)) {
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    html += `<div style="margin-bottom:16px;">
+                        <div style="font-weight:600;color:#667eea;margin-bottom:8px;">${escapeHtml(key)}</div>
+                        <div style="padding-left:16px;">${renderObject(value)}</div>
+                    </div>`;
+                } else if (Array.isArray(value)) {
+                    html += `<div style="margin-bottom:16px;">
+                        <div style="font-weight:600;color:#667eea;margin-bottom:8px;">${escapeHtml(key)}</div>
+                        <ul style="padding-left:20px;">`;
+                    value.forEach(item => {
+                        if (typeof item === 'object') {
+                            html += `<li style="margin-bottom:8px;">${renderObject(item)}</li>`;
+                        } else {
+                            html += `<li>${escapeHtml(String(item))}</li>`;
+                        }
+                    });
+                    html += `</ul></div>`;
+                } else {
+                    html += `<p style="margin-bottom:8px;"><strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(value))}</p>`;
+                }
+            }
+            return html;
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const files = e.target.files;
+            if (!files.length) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            const res = await fetch('/api/upload-files', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('chatHistory').value = data.extracted_text;
+            } else {
+                alert('上传失败：' + data.error);
+            }
+        });
+
+        async function startAnalyze(type) {
+            const industry = document.getElementById('industry').value;
+            const customerInfo = document.getElementById('customerInfo').value;
+            const chatHistory = document.getElementById('chatHistory').value;
+            const resultEl = document.getElementById('result');
+
+            resultEl.innerHTML = "分析中...";
+
+            const formData = new FormData();
+            formData.append('industry', industry);
+            formData.append('customer_info', customerInfo);
+            formData.append('chat_history', chatHistory);
+            formData.append('analysis_type', type);
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    resultEl.innerHTML = renderObject(data);
+                } else {
+                    resultEl.innerHTML = "失败：" + data.error;
+                }
+            } catch (e) {
+                resultEl.innerHTML = "请求失败";
+            }
+        }
+    </script>
+</body>
+</html>
