@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户管理 - 销售成单推演 Agent</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nav a {
+            color: white;
+            margin: 0 10px;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            flex: 1;
+            min-width: 150px;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-bar input, .search-bar select {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            min-width: 150px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .customer-list {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .customer-list th, .customer-list td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .customer-list th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .customer-item:hover {
+            background: #f8f9fa;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="/">快速分析</a>
+            <a href="/customers">客户管理</a>
+        </div>
+
+        <div class="card">
+            <div class="title">客户管理</div>
+
+            <div class="stats" id="statsContainer">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCustomers">0</div>
+                    <div class="stat-label">总客户数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="todayNew">0</div>
+                    <div class="stat-label">今日新增</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="weeklyActive">0</div>
+                    <div class="stat-label">7日活跃</div>
+                </div>
+            </div>
+
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="搜索姓名/公司/电话">
+                <select id="industryFilter">
+                    <option value="">全部行业</option>
+                    <option>SaaS</option>
+                    <option>电商</option>
+                    <option>教育</option>
+                    <option>金融</option>
+                    <option>制造</option>
+                    <option>医疗</option>
+                    <option>其他</option>
+                </select>
+                <button class="btn" onclick="loadCustomers()">搜索</button>
+                <button class="btn btn-success" onclick="openCreateModal()">新增客户</button>
+            </div>
+
+            <table class="customer-list">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>公司</th>
+                        <th>行业</th>
+                        <th>电话</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="customerList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="title">新增客户</div>
+            <form id="createForm">
+                <div class="form-group">
+                    <label>姓名 *</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label>公司</label>
+                    <input type="text" id="company">
+                </div>
+                <div class="form-group">
+                    <label>行业</label>
+                    <select id="industry">
+                        <option>SaaS</option>
+                        <option>电商</option>
+                        <option>教育</option>
+                        <option>金融</option>
+                        <option>制造</option>
+                        <option>医疗</option>
+                        <option>其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>电话</label>
+                    <input type="text" id="phone">
+                </div>
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="text" id="email">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="notes"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn" onclick="closeCreateModal()">取消</button>
+                    <button type="submit" class="btn btn-success">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch("/api/statistics");
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById("totalCustomers").textContent = data.statistics.total_customers || 0;
+                    document.getElementById("todayNew").textContent = data.statistics.today_new || 0;
+                    document.getElementById("weeklyActive").textContent = data.statistics.weekly_active || 0;
+                }
+            } catch (e) {
+                console.error("加载统计失败", e);
+            }
+        }
+
+        async function loadCustomers() {
+            const search = document.getElementById("searchInput").value;
+            const industry = document.getElementById("industryFilter").value;
+            
+            try {
+                const res = await fetch(`/api/customers?search=${encodeURIComponent(search)}&industry=${encodeURIComponent(industry)}`);
+                const data = await res.json();
+                const list = document.getElementById("customerList");
+                list.innerHTML = "";
+
+                if (!data.success || !data.customers.length) {
+                    list.innerHTML = `<tr><td colspan="6" style="text-align:center;">暂无客户</td></tr>`;
+                    return;
+                }
+
+                data.customers.forEach(cust => {
+                    const tr = document.createElement("tr");
+                    tr.className = "customer-item";
+                    tr.innerHTML = `
+                        <td>${escapeHtml(cust.id)}</td>
+                        <td>${escapeHtml(cust.name)}</td>
+                        <td>${escapeHtml(cust.company || "-")}</td>
+                        <td>${escapeHtml(cust.industry || "-")}</td>
+                        <td>${escapeHtml(cust.phone || "-")}</td>
+                        <td class="action-buttons">
+                            <a href="/customers/${escapeHtml(cust.id)}" class="btn btn-sm">查看</a>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${escapeHtml(cust.id)})">删除</button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            } catch (e) {
+                document.getElementById("customerList").innerHTML = `<tr><td colspan="6" style="color:red;">加载失败</td></tr>`;
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById("createModal").style.display = "flex";
+        }
+
+        function closeCreateModal() {
+            document.getElementById("createModal").style.display = "none";
+            document.getElementById("createForm").reset();
+        }
+
+        document.getElementById("createForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append("name", document.getElementById("name").value);
+            formData.append("company", document.getElementById("company").value);
+            formData.append("industry", document.getElementById("industry").value);
+            formData.append("phone", document.getElementById("phone").value);
+            formData.append("email", document.getElementById("email").value);
+            formData.append("notes", document.getElementById("notes").value);
+
+            try {
+                const res = await fetch("/api/customers", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeCreateModal();
+                    loadCustomers();
+                    loadStats();
+                    alert("创建成功！");
+                } else {
+                    alert("创建失败：" + data.error);
+                }
+            } catch (e) {
+                alert("请求失败");
+            }
+        });
+
+        async function deleteCustomer(id) {
+            if (!confirm("确定要删除该客户吗？相关数据也会被删除")) return;
+            try {
+                const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+                const data = await res.json();
+                if (data.success) {
+                    loadCustomers();
+                    loadStats();
+                    alert("删除成功");
+                } else {
+                    alert("删除失败：" + data.error);
+                }
+            } catch (e) {
+                alert("请求失败");
+            }
+        }
+
+        window.onload = () => {
+            loadStats();
+            loadCustomers();
+        };
+    </script>
+</body>
+</html>
